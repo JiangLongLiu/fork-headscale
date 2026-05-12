@@ -44,7 +44,7 @@ type mapper struct {
 	// Configuration
 	state   *state.State
 	cfg     *types.Config
-	batcher Batcher
+	batcher *Batcher
 
 	created time.Time
 }
@@ -239,7 +239,10 @@ func (m *mapper) policyChangeResponse(
 
 	// Send remaining peers in PeersChanged - their AllowedIPs may have
 	// changed due to the policy update (e.g., different routes allowed).
+	// Cross-user peers must also carry their user profile, otherwise the
+	// client's netmap shows the peer without a UserProfiles[user] entry.
 	if currentPeers.Len() > 0 {
+		builder.WithUserProfiles(currentPeers)
 		builder.WithPeerChanges(currentPeers)
 	}
 
@@ -306,6 +309,10 @@ func (m *mapper) buildFromChange(
 
 	if len(resp.PeerPatches) > 0 {
 		builder.WithPeerChangedPatch(resp.PeerPatches)
+	}
+
+	if resp.PingRequest != nil {
+		builder.WithPingRequest(resp.PingRequest)
 	}
 
 	return builder.Build()
